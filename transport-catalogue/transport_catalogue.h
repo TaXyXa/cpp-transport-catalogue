@@ -1,8 +1,7 @@
 #pragma once
 
-#include <deque>
 #include <functional>
-#include <tuple>
+#include <list>
 #include <string>
 #include <string_view>
 #include <set>
@@ -10,9 +9,26 @@
 
 #include "geo.h"
 
+
 struct StopAndCoordinates {
     std::string name;
     Coordinates coordinates;
+};
+
+struct Route {
+    std::string name_;
+    std::vector<StopAndCoordinates*> stops_list;
+};
+
+struct RouteData {
+    int stops_number; 
+    int uniq_stops_number;
+    double route_distance;
+};
+
+struct StopData {
+    int requvest_status; 
+    std::set<std::string_view> buses;
 };
 
 class StopHasher {
@@ -23,17 +39,17 @@ public:
 
 class TransportCatalogue {
 public:
-    void AddStop(std::string& name, Coordinates coordinates);
+    void AddStop(const std::string& name, const Coordinates& coordinates);
 
-    void AddRoute(std::string& bus_name, const std::vector<std::string_view>& stops_vector);
+    void AddRoute(const std::string& bus_name, const std::vector<std::string_view>& stops_vector);
 
-    std::tuple<int, int, double> GetRouteData(const std::string& bus_name) const;
+    RouteData GetRouteData(const std::string_view& bus_name) const;
     
-    std::set<std::string_view> GetStopData(const std::string& stop_name) const;
+    StopData GetStopData(const std::string_view& stop_name) const;
 
 private:
-    std::deque<StopAndCoordinates> stops_;
+    std::list<StopAndCoordinates> stops_;
     std::unordered_map<std::string_view, StopAndCoordinates*> stops_reference_;
-    std::unordered_map<std::string, std::vector<StopAndCoordinates*>> routes_;
+    std::unordered_map<std::string, Route> routes_;
     std::unordered_map<std::string_view, std::set<std::string_view>> stop_and_buses_;
 };

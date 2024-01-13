@@ -2,9 +2,8 @@
 
 #include <iostream>
 #include <algorithm>
-#include <deque>
 #include <functional>
-#include <tuple>
+#include <list>
 #include <string>
 #include <string_view>
 #include <set>
@@ -14,30 +13,30 @@
 
 #include "geo.h"
 
-void TransportCatalogue::AddStop(std::string& name, Coordinates coordinates) {
-	auto deque_end = stops_.end();
-	StopAndCoordinates* deque_pointer = &(*(stops_.insert(deque_end, { std::move(name), coordinates })));
-	stops_reference_.insert({ static_cast<std::string_view>((*deque_pointer).name), deque_pointer });
-    stop_and_buses_.insert({ static_cast<std::string_view>((*deque_pointer).name), {} });
+void TransportCatalogue::AddStop(const std::string& name, const Coordinates& coordinates) {
+	auto list_end = stops_.end();
+    stops_.insert(list_end, { std::move(name), coordinates });
+	StopAndCoordinates* list_pointer = &stops_.back();
+	stops_reference_.insert({ static_cast<std::string_view>((*list_pointer).name), list_pointer });
+    stop_and_buses_.insert({ static_cast<std::string_view>((*list_pointer).name), {} });
 }
 
-void TransportCatalogue::AddRoute(std::string& bus_name, const std::vector<std::string_view>& stops_vector) {
-	std::vector<StopAndCoordinates*> route;
+void TransportCatalogue::AddRoute(const std::string& bus_name, const std::vector<std::string_view>& stops_vector) {
+	Route route;
 	for (const auto stop_name: stops_vector) {
 		StopAndCoordinates* it = stops_reference_.at(stop_name);
-		route.push_back(it);
+		route.stops_list.push_back(it);
 	}
-    std::string buff_bus_name = bus_name;
-    routes_.insert({ std::move(bus_name), std::move(route) });
-    
-    std::unordered_map<std::string, std::vector<StopAndCoordinates*>>::iterator iter;
+    routes_.insert({ bus_name, std::move(route) });
+   
+    std::unordered_map<std::string, Route>::iterator iter;
     try {
-        iter = routes_.find(buff_bus_name);
+        iter = routes_.find(bus_name);
     } catch (std::out_of_range& t) {
         return;
     }
     
-    for (const auto& bus:iter->second) {
+    for (const auto& bus:(iter->second).stops_list) {
         try {
             std::set<std::string_view>& my_set = stop_and_buses_.at((*bus).name);
             my_set.insert(iter->first);
@@ -47,10 +46,10 @@ void TransportCatalogue::AddRoute(std::string& bus_name, const std::vector<std::
     }
 }
 
-std::tuple<int, int, double> TransportCatalogue::GetRouteData(const std::string& bus_name) const {
+RouteData TransportCatalogue::GetRouteData(const std::string_view& bus_name) const {
 	const std::vector<StopAndCoordinates*>* route;
     try {
-        route = &routes_.at(bus_name);
+        route = &routes_.at(static_cast<std::string>(bus_name)).stops_list;
     } catch (std::out_of_range& t) {
         return {0, 0, 0.0};
     }
@@ -66,23 +65,19 @@ std::tuple<int, int, double> TransportCatalogue::GetRouteData(const std::string&
 	}
 	int uniq_stops_number = iters.size();
 	return { stops_number , uniq_stops_number , route_distance };
-
 }
 
-std::set<std::string_view> TransportCatalogue::GetStopData(const std::string& stop_name) const {
-
-    std::set<std::string_view> answer;
+StopData TransportCatalogue::GetStopData(const std::string_view& stop_name) const {
+    StopData answer;
     try {
         auto pointer = &stop_and_buses_.at(stop_name);
-        answer = *pointer;
+        answer = {0, *pointer};
     } catch (std::out_of_range& t) {
-        answer = {"no found"};
+        answer = {1, {}};
     }
     return answer;
 }
 
 size_t StopHasher::operator()(const StopAndCoordinates* stop_name) const {
-    
     return std::hash<std::string>{} ((*stop_name).name);
-    
 }
