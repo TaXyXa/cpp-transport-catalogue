@@ -6,6 +6,7 @@
 #include <string>
 #include <string_view>
 #include <set>
+#include <tuple>
 
 using namespace std::literals;
 
@@ -26,6 +27,7 @@ void PrintBusCommand (const TransportCatalogue& tansport_catalogue, std::string&
 void PrintStopCommand (const TransportCatalogue& tansport_catalogue, std::string& command, 
                       std::string& description, std::ostream& output) {
     StopData answer = tansport_catalogue.GetStopData(description);
+    ////
     switch (answer.requvest_status) 
     {
         case 0:
@@ -42,7 +44,7 @@ void PrintStopCommand (const TransportCatalogue& tansport_catalogue, std::string
     }
     output << command << " "s << description << ": buses"s;
     for (const auto& bus:answer.buses) {
-        output << " " << bus;
+        output << " " << bus->name_;
     }
     output << std::endl;
 }

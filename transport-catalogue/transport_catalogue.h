@@ -1,6 +1,7 @@
 #pragma once
 
 #include <functional>
+#include <tuple>
 #include <list>
 #include <string>
 #include <string_view>
@@ -8,7 +9,6 @@
 #include <unordered_map>
 
 #include "geo.h"
-
 
 struct StopAndCoordinates {
     std::string name;
@@ -26,9 +26,15 @@ struct RouteData {
     double route_distance;
 };
 
+struct CompareRoutes {
+    bool operator()(const Route* route1, const Route* route2) const {
+        return route1->name_ < route2->name_;
+    }
+};
+
 struct StopData {
     int requvest_status; 
-    std::set<std::string_view> buses;
+    std::set<Route*, CompareRoutes> buses;
 };
 
 class StopHasher {
@@ -48,8 +54,15 @@ public:
     StopData GetStopData(const std::string_view& stop_name) const;
 
 private:
+    //у меня же есть отдельный unordered_map для быстрого доступа к остановкам. 
+    //Если я буду использовать vector то при добавлении новых остановок указатели 
+    //на старые в stops_reference_ инвалидируются. Наверное у меня плохой нейминг.
     std::list<StopAndCoordinates> stops_;
     std::unordered_map<std::string_view, StopAndCoordinates*> stops_reference_;
+    //список автобусов тут по сехеме: автобус - маршрут
     std::unordered_map<std::string, Route> routes_;
-    std::unordered_map<std::string_view, std::set<std::string_view>> stop_and_buses_;
+    //а зачем, если я создаю вьюшки на них? вьюшки же как указатели работают, 
+    //или я не правильно их понимаю? но если в дальнейшем понадобится доступ 
+    //к инфрмации каждого автобуса - поменял
+    std::unordered_map<std::string_view, std::set<Route*, CompareRoutes>> stop_and_buses_;
 };

@@ -3,6 +3,7 @@
 #include <iostream>
 #include <algorithm>
 #include <functional>
+#include <tuple>
 #include <list>
 #include <string>
 #include <string_view>
@@ -22,7 +23,7 @@ void TransportCatalogue::AddStop(const std::string& name, const Coordinates& coo
 }
 
 void TransportCatalogue::AddRoute(const std::string& bus_name, const std::vector<std::string_view>& stops_vector) {
-	Route route;
+	Route route = {bus_name, {}};
 	for (const auto stop_name: stops_vector) {
 		StopAndCoordinates* it = stops_reference_.at(stop_name);
 		route.stops_list.push_back(it);
@@ -38,8 +39,8 @@ void TransportCatalogue::AddRoute(const std::string& bus_name, const std::vector
     
     for (const auto& bus:(iter->second).stops_list) {
         try {
-            std::set<std::string_view>& my_set = stop_and_buses_.at((*bus).name);
-            my_set.insert(iter->first);
+            std::set<Route*, CompareRoutes>& my_set = stop_and_buses_.at((*bus).name);
+            my_set.insert(&(iter->second));
         } catch (std::out_of_range& t) {
             continue;
         }
@@ -79,5 +80,7 @@ StopData TransportCatalogue::GetStopData(const std::string_view& stop_name) cons
 }
 
 size_t StopHasher::operator()(const StopAndCoordinates* stop_name) const {
+    
     return std::hash<std::string>{} ((*stop_name).name);
+    
 }
