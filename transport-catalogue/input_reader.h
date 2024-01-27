@@ -1,7 +1,9 @@
 #pragma once
+#include <cstdint>
 #include <string>
 #include <string_view>
 #include <vector>
+#include <unordered_map>
 
 #include "geo.h"
 #include "transport_catalogue.h"

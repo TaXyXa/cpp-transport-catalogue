@@ -21,13 +21,14 @@ void PrintBusCommand (const TransportCatalogue& tansport_catalogue, std::string&
     output << command << " "s << description << ": "s 
         << answer.stops_number << " stops on route, "s 
         << answer.uniq_stops_number << " unique stops, "s 
-        << answer.route_distance << " route length"s << std::endl;    
+        << answer.route_distance << " route length, "s 
+        << answer.curvature << " curvature"s << std::endl;    
 }
 
 void PrintStopCommand (const TransportCatalogue& tansport_catalogue, std::string& command, 
                       std::string& description, std::ostream& output) {
-    StopData answer = tansport_catalogue.GetStopData(description);
-    ////
+    StopInfo answer = tansport_catalogue.GetStopInfo(description);
+    
     switch (answer.requvest_status) 
     {
         case 0:

@@ -33,22 +33,42 @@ std::vector<std::string_view> Split(std::string_view string, char delim) {
     return result;
 }
 
-Coordinates Coordinates(std::string_view str) {
+StopDataParce CoordAndDists(std::string_view str) {
     static const double nan = std::nan("");
-
+    std::unordered_map<std::string, uint32_t> distances;
+    //парсинг координат
     auto not_space = str.find_first_not_of(' ');
     auto comma = str.find(',');
 
     if (comma == str.npos) {
-        return {nan, nan};
+        return {{nan, nan}, std::move(distances)};
     }
 
     auto not_space2 = str.find_first_not_of(' ', comma + 1);
+    auto comma2 = str.find(',', comma + 1);
 
     double lat = std::stod(std::string(str.substr(not_space, comma - not_space)));
-    double lng = std::stod(std::string(str.substr(not_space2)));
+    double lng = std::stod(std::string(str.substr(not_space2, comma2 - not_space2)));
+    //парсинг расстояний
+    auto iter_comma = comma2;
 
-    return {lat, lng};
+    uint32_t distance;
+    std::string stop_name;
+
+    while (iter_comma != str.npos) {
+        auto iter_comma2 = str.find(',', iter_comma + 1);
+        auto not_space3 = str.find_first_not_of(' ', iter_comma + 1);
+        auto metr = str.find_first_of('m', iter_comma + 1);
+        distance = std::stoi(std::string(str.substr(not_space3, metr - not_space3)));
+        //теперь исключаем "to" и парсим название остановки
+        not_space3 = str.find_first_not_of(' ', metr + 1);
+        not_space3 = str.find_first_of(' ', not_space3);
+        stop_name = Trim(std::string(str.substr(not_space3, iter_comma2 - not_space3)));
+        distances.insert({stop_name, distance});
+        iter_comma = iter_comma2;
+    }
+
+    return {{lat, lng}, std::move(distances)};
 }
     
 std::vector<std::string_view> Route(std::string_view route) {
@@ -63,7 +83,7 @@ std::vector<std::string_view> Route(std::string_view route) {
     return results;
 } 
 
-CommandDescription CommandDescription(std::string_view line) {
+CommandDescription Command(std::string_view line) {
     auto colon_pos = line.find(':');
     if (colon_pos == line.npos) {
         return {};
@@ -86,7 +106,7 @@ CommandDescription CommandDescription(std::string_view line) {
 }
     
 void Reader::ParseLine(std::string_view line) {
-    auto command_description = parse::CommandDescription(line);
+    auto command_description = parse::Command(line);
     if (command_description) {
         commands_.push_back(std::move(command_description));
     }
@@ -96,7 +116,7 @@ void Reader::ParseLine(std::string_view line) {
 void Reader::ApplyCommands([[maybe_unused]] TransportCatalogue& catalogue) const {
     for (auto command : commands_) {
         if (command.command == "Stop") {
-            catalogue.AddStop(command.id, parse::Coordinates(command.description));
+            catalogue.AddStop(command.id, parse::CoordAndDists(command.description));
         }
     }
     for (auto command : commands_) {
