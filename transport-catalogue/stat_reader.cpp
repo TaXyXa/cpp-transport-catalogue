@@ -1,12 +1,11 @@
 #include "stat_reader.h"
 
+//#include <algorithm>
 #include <iostream>
-#include <algorithm>
 #include <map>
 #include <string>
 #include <string_view>
 #include <set>
-#include <tuple>
 
 using namespace std::literals;
 
@@ -31,14 +30,14 @@ void PrintStopCommand (const TransportCatalogue& tansport_catalogue, std::string
     
     switch (answer.requvest_status) 
     {
-        case 0:
+        case Requvest_Status::good:
             if (answer.buses.empty()) {
                 output << command << " "s << description << ": no buses"s << std::endl;
                 return;
             }
         break;
             
-        case 1:
+        case Requvest_Status::bad:
             output << command << " "s << description << ": not found"s << std::endl;
             return; 
         break;

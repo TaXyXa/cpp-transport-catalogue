@@ -11,10 +11,13 @@
 
 #include "geo.h"
 
+enum class Requvest_Status {
+    good, bad
+};
+
 struct Stop {
     std::string name;
-    Coordinates coordinates;
-    std::unordered_map<std::string_view, uint32_t> distances; 
+    Coordinates coordinates; 
 };
 
 struct Route {
@@ -23,8 +26,8 @@ struct Route {
 };
 
 struct RouteData {
-    int stops_number; 
-    int uniq_stops_number;
+    size_t stops_number;
+    size_t uniq_stops_number;
     double route_distance;
     double curvature;
 };
@@ -36,13 +39,19 @@ struct CompareRoutes {
 };
 
 struct StopInfo {
-    int requvest_status; 
+    Requvest_Status requvest_status;
     std::set<Route*, CompareRoutes> buses;
 };
 
 class StopHasher {
 public:
     size_t operator()(const Stop* stop_name) const;
+
+};
+
+class DistanceHasher {
+public:
+    size_t operator()(const std::pair<Stop*, Stop*> stop_name) const;
 
 };
 
@@ -70,8 +79,7 @@ private:
     std::unordered_map<std::string_view, Stop*> stops_reference_;
     std::unordered_map<std::string, Route> routes_;
     std::unordered_map<std::string_view, std::set<Route*, CompareRoutes>> stop_and_buses_;
+    std::unordered_map<std::pair<Stop*, Stop*>, uint32_t, DistanceHasher> distances_;
 
-    Stop* AddEmptyStop (const std::string& name);
-    Stop* AddStopCoordinate (Stop* stop, const Coordinates& coordinate);
-    Stop* AddStopDistance (Stop* stop, const std::pair<std::string, uint32_t> distostop);
+    Stop* AddEmptyStop (const std::string& name, const Coordinates& coordinate);
 };
