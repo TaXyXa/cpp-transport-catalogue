@@ -28,22 +28,22 @@ void PrintStopCommand (const TransportCatalogue& tansport_catalogue, std::string
                       std::string& description, std::ostream& output) {
     StopInfo answer = tansport_catalogue.GetStopInfo(description);
     
-    switch (answer.requvest_status) 
+    switch (answer.request_status) 
     {
-        case Requvest_Status::good:
+        case RequestStatus::good:
             if (answer.buses.empty()) {
                 output << command << " "s << description << ": no buses"s << std::endl;
                 return;
             }
         break;
             
-        case Requvest_Status::bad:
+        case RequestStatus::bad:
             output << command << " "s << description << ": not found"s << std::endl;
             return; 
         break;
     }
     output << command << " "s << description << ": buses"s;
-    for (const auto& bus:answer.buses) {
+    for (const auto& bus : answer.buses) {
         output << " " << bus->name_;
     }
     output << std::endl;

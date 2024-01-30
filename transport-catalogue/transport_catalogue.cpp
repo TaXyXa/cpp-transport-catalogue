@@ -15,10 +15,6 @@
 Stop* TransportCatalogue::AddEmptyStop(const std::string& name, const Coordinates& coordinate) {
     Stop* list_pointer = nullptr;
     auto it = stops_reference_.find(name);
-    //не могу полностью избавиться от добавления пустых остановок, так как для хранения 
-    //расстояний я хочу использовать легкие указатели Stop*, с помощью которых сразу и буду 
-    //искать нужное расстоние. Иначе я вижу только вариант с хранением string для каждой 
-    //дистанции
     if (it == stops_reference_.end()) {
         stops_.push_back({ name, coordinate });
         list_pointer = &stops_.back();
@@ -30,11 +26,14 @@ Stop* TransportCatalogue::AddEmptyStop(const std::string& name, const Coordinate
     return list_pointer;
 }
 
-void TransportCatalogue::AddStop(const std::string& name, const StopDataParce& stop_data) {
-    Stop* curent_stop = AddEmptyStop(name, stop_data.coordinates);
+Stop* TransportCatalogue::AddStop(const std::string& name, const Coordinates& coordinates) {
+    Stop* curent_stop = AddEmptyStop(name, coordinates);
     stop_and_buses_.insert({ static_cast<std::string_view>((*curent_stop).name), {} });
+    return curent_stop;
+}
 
-    for (const auto& dist : stop_data.distances) {
+void TransportCatalogue::AddDistance(Stop* curent_stop, const std::vector<std::pair<std::string, uint32_t>>& distances) {
+    for (const auto& dist : distances) {
         Stop* second_stop = nullptr;
         auto it2 = stops_reference_.find(dist.first);
         if (it2 == stops_reference_.end()) {
@@ -55,38 +54,32 @@ void TransportCatalogue::AddRoute(const std::string& bus_name, const std::vector
     routes_.insert({ bus_name, std::move(route) });
 
     std::unordered_map<std::string, Route>::iterator iter;
-    try {
-        iter = routes_.find(bus_name);
-    }
-    catch (std::out_of_range& t) {
+    iter = routes_.find(bus_name);
+    if (iter == routes_.end()) {
         return;
     }
 
     for (const auto& bus : (iter->second).stops_list) {
-        try {
-            std::set<Route*, CompareRoutes>& my_set = stop_and_buses_.at((*bus).name);
-            my_set.insert(&(iter->second));
-        }
-        catch (std::out_of_range& t) {
-            continue;
+        std::set<Route*, CompareRoutes>* my_set = nullptr;
+        auto iter2 = stop_and_buses_.find((*bus).name);
+        if (iter2 != stop_and_buses_.end()) {
+            (*iter2).second.insert(&(iter->second));
         }
     }
 }
 
-RouteData TransportCatalogue::GetRouteData(const std::string_view& bus_name) const {
-    const std::vector<Stop*>* route = nullptr;
-    auto it_route = routes_.find(static_cast<std::string>(bus_name));
-    if (it_route != routes_.end()) {
-        route = &(*it_route).second.stops_list;
-    } else {
-        return { 0, 0, 0.0, 0.0 };
-    }
-
-    const size_t stops_number = (*route).size();
-    std::unordered_set <Stop*, StopHasher> iters;
+double TransportCatalogue::GetGeoDistance(const std::vector<Stop*>* route) const {
     double geo_distance = 0;
-    double route_distance = 0;
     Coordinates coordinate = (*(*route).begin())->coordinates;
+    for (const auto& stop : *route) {
+        geo_distance += ComputeDistance(coordinate, stop->coordinates);
+        coordinate = stop->coordinates;
+    }
+    return geo_distance;
+}
+
+double TransportCatalogue::GetRouteDistance(const std::vector<Stop*>* route) const {
+    double route_distance = 0;
     Stop* previous_stop = *(*route).begin();
     bool first = true;
     for (const auto& stop : *route) {
@@ -97,38 +90,50 @@ RouteData TransportCatalogue::GetRouteData(const std::string_view& bus_name) con
             auto it_dist = distances_.find({ previous_stop, stop });
             if (it_dist != distances_.end()) {
                 route_distance += (*it_dist).second;
-            } 
+            }
             else {
                 it_dist = distances_.find({ stop, previous_stop });
-                //да действительно здесь получилось сэкономить, так как расстояния теперь не дублируются 
-                //за счет контейнера с парой указателей. Спасибо!
                 if (it_dist != distances_.end()) {
                     route_distance += (*it_dist).second;
                 }
-            }        
+            }
         }
-        geo_distance += ComputeDistance(coordinate, stop->coordinates);
-        iters.insert(stop);
-        coordinate = stop->coordinates;
         previous_stop = stop;
     }
+    return route_distance;
+}
+
+size_t TransportCatalogue::GetUniqStops(const std::vector<Stop*>* route) const {
+    std::unordered_set <Stop*, StopHasher> iters;
+    for (const auto& stop : *route) {
+        iters.insert(stop);
+    }
+    return iters.size();
+}
+RouteData TransportCatalogue::GetRouteData(const std::string_view& bus_name) const {
+    const std::vector<Stop*>* route = nullptr;
+    auto it_route = routes_.find(static_cast<std::string>(bus_name));
+    if (it_route != routes_.end()) {
+        route = &(*it_route).second.stops_list;
+    } else {
+        return { 0, 0, 0.0, 0.0 };
+    }
+    const size_t stops_number = (*route).size();
+    double geo_distance = GetGeoDistance (route);
+    double route_distance = GetRouteDistance (route);
     const double curvature = route_distance / geo_distance;
-    const size_t uniq_stops_number = iters.size();
+    const size_t uniq_stops_number = GetUniqStops (route);
     return { stops_number , uniq_stops_number , route_distance , curvature };
 }
 
-
-
 StopInfo TransportCatalogue::GetStopInfo(const std::string_view& stop_name) const {
-    StopInfo answer;
-    try {
-        auto pointer = &stop_and_buses_.at(stop_name);
-        answer = { Requvest_Status::good, *pointer };
+    auto iter = stop_and_buses_.find(stop_name);
+    if (iter != stop_and_buses_.end()) {
+        return { RequestStatus::good, (*iter).second };
     }
-    catch (std::out_of_range& t) {
-        answer = { Requvest_Status::bad, {} };
+    else {
+        return { RequestStatus::bad, {} };
     }
-    return answer;
 }
 
 size_t StopHasher::operator()(const Stop* stop_name) const {

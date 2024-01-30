@@ -7,12 +7,14 @@
 #include <string>
 #include <string_view>
 #include <set>
+#include <vector>
 #include <unordered_map>
 
 #include "geo.h"
 
-enum class Requvest_Status {
-    good, bad
+enum class RequestStatus {
+    good, 
+    bad
 };
 
 struct Stop {
@@ -39,7 +41,7 @@ struct CompareRoutes {
 };
 
 struct StopInfo {
-    Requvest_Status requvest_status;
+    RequestStatus request_status;
     std::set<Route*, CompareRoutes> buses;
 };
 
@@ -55,15 +57,19 @@ public:
 
 };
 
-//структура для передачи распарсеной строки
+//структура для передачи распарсеной строки 
+//я и не храню в них остановки, они нужна для передачи из метода CoordAndDists в справочник
+//но хорошо что вы обратили внимание на нее, я зачем то использовал map, хотя лучше vector
 struct StopDataParce {
     Coordinates coordinates;
-    std::unordered_map<std::string, uint32_t> distances; 
+    std::vector<std::pair<std::string, uint32_t>> distances;
 };
 
 class TransportCatalogue {
 public:
-    void AddStop(const std::string& name, const StopDataParce& stop_data);
+    Stop* AddStop(const std::string& name, const Coordinates& coordinates);
+    
+    void AddDistance(Stop* curent_stop, const std::vector<std::pair<std::string, uint32_t>>& distances);
 
     void AddRoute(const std::string& bus_name, const std::vector<std::string_view>& stops_vector);
 
@@ -72,14 +78,19 @@ public:
     StopInfo GetStopInfo(const std::string_view& stop_name) const;
 
 private:
-    //Возможно стоит заменить Stop* на умный указатель, но так как я не понимаю зачем 
-    //то пока отправлю просто рабочу версию кода чтобы двигаться дальше
-    //Будет интересен ваш комментарий на этот счет
     std::list<Stop> stops_;
     std::unordered_map<std::string_view, Stop*> stops_reference_;
     std::unordered_map<std::string, Route> routes_;
     std::unordered_map<std::string_view, std::set<Route*, CompareRoutes>> stop_and_buses_;
     std::unordered_map<std::pair<Stop*, Stop*>, uint32_t, DistanceHasher> distances_;
-
+    //по поводу пустых остановок - я делаю это для экономии памяти. в контейнере маршрутов 
+    //мне необходимо как то хранить информацию об обоих остановках, причем при добавлении расстояний
+    //второй остановки может еще не быть в справочнике. У нас есть только её название, но хранить 
+    //дистанции между двумя остановками используя их названия в виде string расточительно
+    //гораздо лучше использовать пару итераторов Stop*. Исходные данные по условиям корректны
+    //а значит остановка без кординат вызвана не будет
     Stop* AddEmptyStop (const std::string& name, const Coordinates& coordinate);
+    double GetGeoDistance (const std::vector<Stop*>* route) const;
+    double GetRouteDistance (const std::vector<Stop*>* route) const;
+    size_t GetUniqStops (const std::vector<Stop*>* route) const;
 };

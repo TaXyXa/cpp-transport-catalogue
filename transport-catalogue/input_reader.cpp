@@ -3,6 +3,8 @@
 #include <algorithm>
 #include <cassert>
 #include <iterator>
+#include <vector>
+#include <utility>
 
 namespace input {
 namespace parse {
@@ -35,7 +37,7 @@ std::vector<std::string_view> Split(std::string_view string, char delim) {
 
 StopDataParce CoordAndDists(std::string_view str) {
     static const double nan = std::nan("");
-    std::unordered_map<std::string, uint32_t> distances;
+    std::vector<std::pair<std::string, uint32_t>> distances;
     //парсинг координат
     auto not_space = str.find_first_not_of(' ');
     auto comma = str.find(',');
@@ -64,7 +66,7 @@ StopDataParce CoordAndDists(std::string_view str) {
         not_space3 = str.find_first_not_of(' ', metr + 1);
         not_space3 = str.find_first_of(' ', not_space3);
         stop_name = Trim(std::string(str.substr(not_space3, iter_comma2 - not_space3)));
-        distances.insert({stop_name, distance});
+        distances.push_back({stop_name, distance});
         iter_comma = iter_comma2;
     }
 
@@ -116,7 +118,9 @@ void Reader::ParseLine(std::string_view line) {
 void Reader::ApplyCommands([[maybe_unused]] TransportCatalogue& catalogue) const {
     for (auto command : commands_) {
         if (command.command == "Stop") {
-            catalogue.AddStop(command.id, parse::CoordAndDists(command.description));
+            StopDataParce stop_data = parse::CoordAndDists(command.description);
+            Stop* curent_stop = catalogue.AddStop(command.id, stop_data.coordinates);
+            catalogue.AddDistance(curent_stop, stop_data.distances);
         }
     }
     for (auto command : commands_) {
