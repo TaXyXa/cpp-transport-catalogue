@@ -116,17 +116,23 @@ void Reader::ParseLine(std::string_view line) {
 
     
 void Reader::ApplyCommands([[maybe_unused]] TransportCatalogue& catalogue) const {
+    std::vector<std::pair<std::pair<std::string, std::string>, uint32_t>> distances;
     for (auto command : commands_) {
         if (command.command == "Stop") {
             StopDataParce stop_data = parse::CoordAndDists(command.description);
-            Stop* curent_stop = catalogue.AddStop(command.id, stop_data.coordinates);
-            catalogue.AddDistance(curent_stop, stop_data.distances);
+            catalogue.AddStop(command.id, stop_data.coordinates);
+            for (auto& stop_dist : stop_data.distances) {
+                distances.push_back({ {command.id, stop_dist.first}, stop_dist.second });
+            }
         }
     }
     for (auto command : commands_) {
         if (command.command == "Bus") {
             catalogue.AddRoute(command.id, parse::Route(command.description));
         }
+    }
+    for (auto& dist : distances) {
+        catalogue.AddDistance(dist.first.first, dist.first.second, dist.second);
     }
 } 
 }

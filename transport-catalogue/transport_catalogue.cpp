@@ -2,7 +2,7 @@
 
 #include <cstdint>
 #include <functional>
-#include <list>
+#include <forward_list>
 #include <string>
 #include <string_view>
 #include <set>
@@ -16,8 +16,8 @@ Stop* TransportCatalogue::AddEmptyStop(const std::string& name, const Coordinate
     Stop* list_pointer = nullptr;
     auto it = stops_reference_.find(name);
     if (it == stops_reference_.end()) {
-        stops_.push_back({ name, coordinate });
-        list_pointer = &stops_.back();
+        stops_.push_front({ name, coordinate });
+        list_pointer = &stops_.front();
     } else {
         list_pointer = (*it).second;
         (*list_pointer).coordinates = coordinate;
@@ -32,17 +32,24 @@ Stop* TransportCatalogue::AddStop(const std::string& name, const Coordinates& co
     return curent_stop;
 }
 
-void TransportCatalogue::AddDistance(Stop* curent_stop, const std::vector<std::pair<std::string, uint32_t>>& distances) {
-    for (const auto& dist : distances) {
-        Stop* second_stop = nullptr;
-        auto it2 = stops_reference_.find(dist.first);
-        if (it2 == stops_reference_.end()) {
-            second_stop = AddEmptyStop(dist.first, {});
-        } else {
-            second_stop = (*it2).second;
-        }
-        distances_.insert({ { curent_stop, second_stop }, dist.second });
+void TransportCatalogue::AddDistance(std::string& curent_stop, std::string& second_stop, uint32_t distance) {
+    auto curent_it = stops_reference_.find(curent_stop);
+    auto second_it = stops_reference_.find(second_stop);
+    if (curent_it != stops_reference_.end() && second_it != stops_reference_.end()) {
+        distances_.insert({ { (*curent_it).second, (*second_it).second }, distance });
     }
+}
+
+uint32_t TransportCatalogue::GetDistance(Stop* curent_stop, Stop* second_stop) const {
+    auto iter = distances_.find({curent_stop, second_stop});
+    if (iter != distances_.end()) {
+        return (*iter).second;
+    }
+    iter = distances_.find({ second_stop, curent_stop });
+    if (iter != distances_.end()) {
+        return (*iter).second;
+    }
+    return 1;
 }
 
 void TransportCatalogue::AddRoute(const std::string& bus_name, const std::vector<std::string_view>& stops_vector) {
@@ -60,7 +67,6 @@ void TransportCatalogue::AddRoute(const std::string& bus_name, const std::vector
     }
 
     for (const auto& bus : (iter->second).stops_list) {
-        std::set<Route*, CompareRoutes>* my_set = nullptr;
         auto iter2 = stop_and_buses_.find((*bus).name);
         if (iter2 != stop_and_buses_.end()) {
             (*iter2).second.insert(&(iter->second));
@@ -87,16 +93,7 @@ double TransportCatalogue::GetRouteDistance(const std::vector<Stop*>* route) con
             first = false;
         }
         else {
-            auto it_dist = distances_.find({ previous_stop, stop });
-            if (it_dist != distances_.end()) {
-                route_distance += (*it_dist).second;
-            }
-            else {
-                it_dist = distances_.find({ stop, previous_stop });
-                if (it_dist != distances_.end()) {
-                    route_distance += (*it_dist).second;
-                }
-            }
+            route_distance += GetDistance(previous_stop, stop);
         }
         previous_stop = stop;
     }
@@ -149,3 +146,4 @@ size_t DistanceHasher::operator()(const std::pair<Stop*, Stop*> stop_name) const
     return hash;
 
 }
+
