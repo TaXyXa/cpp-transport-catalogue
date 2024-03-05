@@ -1,5 +1,4 @@
-#include "transport_catalogue.h"
-
+#include <algorithm>
 #include <cstdint>
 #include <functional>
 #include <forward_list>
@@ -10,38 +9,42 @@
 #include <unordered_map>
 #include <unordered_set>
 
+#include "transport_catalogue.h"
 #include "geo.h"
-
-Stop* TransportCatalogue::AddEmptyStop(const std::string& name, const Coordinates& coordinate) {
-    Stop* list_pointer = nullptr;
-    auto it = stops_reference_.find(name);
-    if (it == stops_reference_.end()) {
-        stops_.push_front({ name, coordinate });
-        list_pointer = &stops_.front();
-    } else {
-        list_pointer = (*it).second;
-        (*list_pointer).coordinates = coordinate;
-    }
-    stops_reference_.insert({ static_cast<std::string_view>((*list_pointer).name), list_pointer });
-    return list_pointer;
-}
+#include "domain.h"
 
 Stop* TransportCatalogue::AddStop(const std::string& name, const Coordinates& coordinates) {
-    Stop* curent_stop = AddEmptyStop(name, coordinates);
+    Stop* curent_stop = nullptr;
+    auto it = stops_reference_.find(name);
+    if (it == stops_reference_.end()) {
+        stops_.push_front({ name, coordinates });
+        curent_stop = &stops_.front();
+    }
+    else {
+        curent_stop = (*it).second;
+        (*curent_stop).coordinates = coordinates;
+    }
+    stops_reference_.insert({ static_cast<std::string_view>((*curent_stop).name), curent_stop });
     stop_and_buses_.insert({ static_cast<std::string_view>((*curent_stop).name), {} });
     return curent_stop;
 }
 
-void TransportCatalogue::AddDistance(std::string& curent_stop, std::string& second_stop, uint32_t distance) {
-    auto curent_it = stops_reference_.find(curent_stop);
-    auto second_it = stops_reference_.find(second_stop);
-    if (curent_it != stops_reference_.end() && second_it != stops_reference_.end()) {
-        distances_.insert({ { (*curent_it).second, (*second_it).second }, distance });
+Stop* TransportCatalogue::GetStop(const std::string& name) {
+    auto it = stops_reference_.find(name);
+    if (it == stops_reference_.end()) {
+        return nullptr;
+    }
+    else {
+        return it->second;
     }
 }
 
+void TransportCatalogue::AddDistance(Stop* curent_stop, Stop* second_stop, uint32_t distance) {
+    distances_.insert({ { curent_stop, second_stop }, distance });
+}
+
 uint32_t TransportCatalogue::GetDistance(Stop* curent_stop, Stop* second_stop) const {
-    auto iter = distances_.find({curent_stop, second_stop});
+    auto iter = distances_.find({ curent_stop, second_stop });
     if (iter != distances_.end()) {
         return (*iter).second;
     }
@@ -49,16 +52,22 @@ uint32_t TransportCatalogue::GetDistance(Stop* curent_stop, Stop* second_stop) c
     if (iter != distances_.end()) {
         return (*iter).second;
     }
-    return 1;
+    return ComputeDistance(curent_stop->coordinates, second_stop->coordinates);
 }
 
-void TransportCatalogue::AddRoute(const std::string& bus_name, const std::vector<std::string_view>& stops_vector) {
-    Route route = { bus_name, {} };
+void TransportCatalogue::AddRoute(const std::string& bus_name, const std::vector<std::string_view>& stops_vector,
+    const std::vector<std::string_view>& end_stops_vector) {
+    Route route = { bus_name, {}, {} };
     for (const auto stop_name : stops_vector) {
         Stop* it = stops_reference_.at(stop_name);
         route.stops_list.push_back(it);
     }
-    routes_.insert({ bus_name, std::move(route) });
+    for (const auto stop_name : end_stops_vector) {
+        Stop* it = stops_reference_.at(stop_name);
+        route.end_stops_list.push_back(it);
+    }
+
+    routes_.insert({ bus_name, std::move(route)});
 
     std::unordered_map<std::string, Route>::iterator iter;
     iter = routes_.find(bus_name);
@@ -72,6 +81,27 @@ void TransportCatalogue::AddRoute(const std::string& bus_name, const std::vector
             (*iter2).second.insert(&(iter->second));
         }
     }
+}
+
+const Route* TransportCatalogue::GetRoute(const std::string& name) const {
+    auto iter = routes_.find(name);
+    if (iter != routes_.end()) {
+        return &(iter->second);
+    }
+    return nullptr;
+}
+
+std::vector<const Route*> TransportCatalogue::GetAllRouts() const {
+    std::vector<const Route*> routs;
+    routs.reserve(routes_.size());
+    for (const auto& route : routes_) {
+        const Route* route_ptr = &route.second;
+        routs.push_back(route_ptr);
+    }
+    std::sort(routs.begin(), routs.end(), [](const Route* lhr, const Route* rhr) {
+        return lhr->name_ < rhr->name_;
+        });
+    return routs;
 }
 
 double TransportCatalogue::GetGeoDistance(const std::vector<Stop*>* route) const {
@@ -112,38 +142,27 @@ RouteData TransportCatalogue::GetRouteData(const std::string_view& bus_name) con
     auto it_route = routes_.find(static_cast<std::string>(bus_name));
     if (it_route != routes_.end()) {
         route = &(*it_route).second.stops_list;
-    } else {
-        return { 0, 0, 0.0, 0.0 };
+    }
+    else {
+        return { RequestStatus::bad, 0, 0, 0.0, 0.0 };
     }
     const size_t stops_number = (*route).size();
-    double geo_distance = GetGeoDistance (route);
-    double route_distance = GetRouteDistance (route);
+    double geo_distance = GetGeoDistance(route);
+    double route_distance = GetRouteDistance(route);
     const double curvature = route_distance / geo_distance;
-    const size_t uniq_stops_number = GetUniqStops (route);
-    return { stops_number , uniq_stops_number , route_distance , curvature };
+    const size_t uniq_stops_number = GetUniqStops(route);
+    return { RequestStatus::good, stops_number , uniq_stops_number , route_distance , curvature };
 }
 
 StopInfo TransportCatalogue::GetStopInfo(const std::string_view& stop_name) const {
+    StopInfo ans = { RequestStatus::bad , nullptr};
     auto iter = stop_and_buses_.find(stop_name);
     if (iter != stop_and_buses_.end()) {
-        return { RequestStatus::good, (*iter).second };
+        ans.request_status = RequestStatus::good;
+        ans.buses = &(iter->second);
+        return ans;
     }
     else {
-        return { RequestStatus::bad, {} };
+        return ans;
     }
 }
-
-size_t StopHasher::operator()(const Stop* stop_name) const {
-
-    return std::hash<std::string>{} ((*stop_name).name);
-
-}
-
-size_t DistanceHasher::operator()(const std::pair<Stop*, Stop*> stop_name) const {
-    size_t hash = std::hash<std::string>{} ((*stop_name.first).name)
-        * std::hash<std::string>{} ((*stop_name.first).name)
-        + std::hash<std::string>{} ((*stop_name.second).name);
-    return hash;
-
-}
-
