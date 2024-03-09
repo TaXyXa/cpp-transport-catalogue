@@ -31,7 +31,7 @@ void PrintStopCommand (const TransportCatalogue& tansport_catalogue, std::string
     switch (answer.request_status) 
     {
         case RequestStatus::good:
-            if (answer.buses.empty()) {
+            if (answer.buses->empty()) {
                 output << command << " "s << description << ": no buses"s << std::endl;
                 return;
             }
@@ -43,7 +43,7 @@ void PrintStopCommand (const TransportCatalogue& tansport_catalogue, std::string
         break;
     }
     output << command << " "s << description << ": buses"s;
-    for (const auto& bus : answer.buses) {
+    for (const auto& bus : *answer.buses) {
         output << " " << bus->name_;
     }
     output << std::endl;

@@ -35,7 +35,7 @@ std::vector<std::string_view> Split(std::string_view string, char delim) {
     return result;
 }
 
-StopDataParce CoordAndDists(std::string_view str) {
+StopDataParse GetCoordAndDists(std::string_view str) {
     static const double nan = std::nan("");
     std::vector<std::pair<std::string, uint32_t>> distances;
     //парсинг координат
@@ -116,23 +116,24 @@ void Reader::ParseLine(std::string_view line) {
 
     
 void Reader::ApplyCommands([[maybe_unused]] TransportCatalogue& catalogue) const {
-    std::vector<std::pair<std::pair<std::string, std::string>, uint32_t>> distances;
+    std::vector<std::pair<std::pair<Stop*, std::string>, uint32_t>> distances;
     for (auto command : commands_) {
         if (command.command == "Stop") {
-            StopDataParce stop_data = parse::CoordAndDists(command.description);
-            catalogue.AddStop(command.id, stop_data.coordinates);
+            StopDataParse stop_data = parse::GetCoordAndDists(command.description);
+            Stop* curent_stop = catalogue.AddStop(command.id, stop_data.coordinates);
             for (auto& stop_dist : stop_data.distances) {
-                distances.push_back({ {command.id, stop_dist.first}, stop_dist.second });
+                distances.push_back({ {curent_stop, stop_dist.first}, stop_dist.second });
             }
         }
     }
     for (auto command : commands_) {
         if (command.command == "Bus") {
-            catalogue.AddRoute(command.id, parse::Route(command.description));
+            catalogue.AddRoute(command.id, parse::Route(command.description), {});
         }
     }
     for (auto& dist : distances) {
-        catalogue.AddDistance(dist.first.first, dist.first.second, dist.second);
+        Stop* second_stop = catalogue.GetStop(dist.first.second);
+        catalogue.AddDistance(dist.first.first, second_stop, dist.second);
     }
 } 
 }

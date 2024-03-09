@@ -35,6 +35,8 @@ public:
     StopInfo GetStopInfo(const std::string_view& stop_name) const;
 
 private:
+    //нууу мы с вами пришли к тому что deque излишен, так как мы не перемещаемся по контейнеру, нам от него
+    //нужно только быстрое добавление без инвалидации итераторов
     std::forward_list<Stop> stops_;
     std::unordered_map<std::string_view, Stop*> stops_reference_;
     std::unordered_map<std::string, Route> routes_;

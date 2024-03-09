@@ -9,33 +9,33 @@ using namespace std;
 namespace json {
 
     bool Node::IsInt() const {
-        return value_.index() == 4;
+        return this->index() == 4;
     }
     bool Node::IsDouble() const {
-        return value_.index() == 4 || value_.index() == 5;
+        return this->index() == 4 || this->index() == 5;
     }
     bool Node::IsPureDouble() const {
-        return value_.index() == 5;
+        return this->index() == 5;
     }
     bool Node::IsBool() const {
-        return value_.index() == 3;
+        return this->index() == 3;
     }
     bool Node::IsString() const {
-        return value_.index() == 6;
+        return this->index() == 6;
     }
     bool Node::IsNull() const {
-        return value_.index() == 0;
+        return this->index() == 0;
     }
     bool Node::IsArray() const {
-        return value_.index() == 1;
+        return this->index() == 1;
     }
     bool Node::IsMap() const {
-        return value_.index() == 2;
+        return this->index() == 2;
     }
 
     int Node::AsInt() const {
         if (IsInt()) {
-            return std::get<int>(value_);
+            return std::get<int>(*this);
         }
         else {
             throw std::logic_error("error_type");
@@ -43,7 +43,7 @@ namespace json {
     }
     bool Node::AsBool() const {
         if (IsBool()) {
-            return std::get<bool>(value_);
+            return std::get<bool>(*this);
         }
         else {
             throw std::logic_error("error_type");
@@ -51,10 +51,10 @@ namespace json {
     }
     double Node::AsDouble() const {
         if (IsInt()) {
-            return std::get<int>(value_);
+            return std::get<int>(*this);
         }
         else if (IsPureDouble()) {
-            return std::get<double>(value_);
+            return std::get<double>(*this);
         }
         else {
             throw std::logic_error("error_type");
@@ -62,13 +62,13 @@ namespace json {
     }
     const std::string& Node::AsString() const {
         if (IsString()) {
-            return std::get<string>(value_);
+            return std::get<string>(*this);
         }
         throw std::logic_error("error_type");
     }
     const Array& Node::AsArray() const {
         if (IsArray()) {
-            return std::get<Array>(value_);
+            return std::get<Array>(*this);
         }
         else {
             throw std::logic_error("error_type");
@@ -76,7 +76,7 @@ namespace json {
     }
     const Dict& Node::AsMap() const {
         if (IsMap()) {
-            return std::get<Dict>(value_);
+            return std::get<Dict>(*this);
         }
         else {
             throw std::logic_error("error_type");
@@ -387,45 +387,17 @@ namespace json {
 
     }  // namespace
 
-    Node::Node() 
-        :value_(nullptr) {
-    }
-
-    Node::Node(std::nullptr_t nptr)
-        : value_(nptr) {
-    }
-
-    Node::Node(Array array)
-        : value_(move(array)) {
-    }
-
-    Node::Node(Dict map)
-        : value_(move(map)) {
-    }
-
-    Node::Node(int value)
-        : value_(value) {
-    }
-
-    Node::Node(bool value)
-        : value_(value) {
-    }
-
-    Node::Node(double value) 
-    : value_(value) {
-    }
-
-    Node::Node(std::string value) {
+    Node::Node(std::string value) : Value(value) {
         if (value == "null") {
-            value_ = nullptr;
+            Value(nullptr);
         }
         else {
-            value_ = value;
+            Value(value);
         }
     }
 
-    const Node::Value& Node::GetValue() const {
-        return value_;
+    const Value& Node::GetValue() const {
+        return *this;
     }
 
     Document::Document(Node root)

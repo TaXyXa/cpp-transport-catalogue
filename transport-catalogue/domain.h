@@ -66,7 +66,7 @@ public:
     size_t operator()(const Coordinates coordinate) const;
 };
 //структура для передачи распарсеной строки 
-struct StopDataParce {
+struct StopDataParse {
     Coordinates coordinates;
     std::vector<std::pair<std::string, uint32_t>> distances;
 };

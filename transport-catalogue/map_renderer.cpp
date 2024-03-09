@@ -41,8 +41,8 @@ namespace renderer {
 	void MapRenderer::RenderMap(svg::Document& document, std::vector<const Route*> routs) {
 		//scaling map
 		std::unordered_set<Coordinates, CoordinateHasher> all_points = GetAllPoints(routs);
-		const SphereProjector projector(all_points.begin(), all_points.end(), render_setting_.width, render_setting_.height, render_setting_.padding);
-
+		const SphereProjector projector(all_points.begin(), all_points.end(), 
+			render_setting_.width, render_setting_.height, render_setting_.padding);
 		std::vector<svg::Color> routs_colors = MakeRoutsPalete(render_setting_, routs);
 		std::vector<Stop*> stops_list;
 		std::vector<Route_End_Data> route_ens_stops_list;
@@ -79,7 +79,8 @@ namespace renderer {
 		for (const auto& [end_stop, name, color] : route_ens_stops_list) {
 			svg::Text route_name;
 			route_name.SetPosition(projector(end_stop->coordinates)).SetOffset(render_setting_.bus_label_offset)
-				.SetFontSize(render_setting_.bus_label_font_size).SetFontFamily("Verdana").SetFontWeight("bold").SetData(name);
+				.SetFontSize(render_setting_.bus_label_font_size).SetFontFamily("Verdana")
+				.SetFontWeight("bold").SetData(name);
 			svg::Text route_name_underlayer = route_name;
 			route_name.SetFillColor(color);
 			route_name_underlayer.SetFillColor(render_setting_.underlayer_color).SetStrokeColor(render_setting_.underlayer_color)
