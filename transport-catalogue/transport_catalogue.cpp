@@ -146,11 +146,11 @@ RouteData TransportCatalogue::GetRouteData(const std::string_view& bus_name) con
     else {
         return { RequestStatus::bad, 0, 0, 0.0, 0.0 };
     }
-    const size_t stops_number = (*route).size();
+    const int stops_number = (*route).size();
     double geo_distance = GetGeoDistance(route);
     double route_distance = GetRouteDistance(route);
     const double curvature = route_distance / geo_distance;
-    const size_t uniq_stops_number = GetUniqStops(route);
+    const int uniq_stops_number = GetUniqStops(route);
     return { RequestStatus::good, stops_number , uniq_stops_number , route_distance , curvature };
 }
 

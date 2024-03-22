@@ -10,6 +10,7 @@
 #include "domain.h"
 #include "geo.h"
 #include "json.h"
+#include "json_builder.h"
 #include "request_handler.h"
 
 using namespace std::literals;
@@ -46,7 +47,7 @@ namespace json {
 			answer.coordinates = { stop_data.at("latitude").AsDouble(), stop_data.at("longitude").AsDouble() };
 			auto iter = stop_data.find("road_distances");
 			if (iter != stop_data.end()) {
-				for (const auto& element : (*iter).second.AsMap()) {
+				for (const auto& element : (*iter).second.AsDict()) {
 					answer.distances.push_back({ element.first, element.second.AsDouble() });
 				}
 			}
@@ -80,7 +81,7 @@ namespace json {
 			if (iter != root.end()) {
 				std::vector<std::pair<std::pair<Stop*, std::string>, uint32_t>> distances;
 				for (const Node& element : (*iter).second.AsArray()) {
-					Dict curent_map = element.AsMap();
+					Dict curent_map = element.AsDict();
 					if (curent_map.at("type").AsString() == "Stop") {
 						StopDataParse stop_data = parse::GetCoordAndDists(curent_map);
 						Stop* curent_stop = request_handler.AddStop(curent_map.at("name").AsString(), stop_data.coordinates);
@@ -90,7 +91,7 @@ namespace json {
 					}
 				}
 				for (const Node& element : (*iter).second.AsArray()) {
-					Dict curent_map = element.AsMap();
+					Dict curent_map = element.AsDict();
 					if (curent_map.at("type").AsString() == "Bus") {
 						request_handler.AddRoute(
 							curent_map.at("name").AsString(), 
@@ -111,7 +112,7 @@ namespace json {
 		void ReadRenderSetting (const Dict& root, RequestHandler& request_handler) {	
 			auto iter = root.find("render_settings");
 			if (iter != root.end()) {
-				Dict curent_set = iter->second.AsMap();
+				Dict curent_set = iter->second.AsDict();
 				renderer::Setting setting;
 				setting.width = curent_set.at("width").AsDouble();
 				setting.height = curent_set.at("height").AsDouble();
@@ -140,7 +141,7 @@ namespace json {
 			auto iter = root.find("stat_requests");
 			if (iter != root.end()) {
 				for (const Node& element : (*iter).second.AsArray()) {
-					Dict curent_map = element.AsMap();
+					Dict curent_map = element.AsDict();
 					int id = 0;
 					std::string type;
 					std::string name;
@@ -163,21 +164,23 @@ namespace json {
 	}
 
 	namespace print {
-		
-		void PrintBusCommand(Dict& dict, RouteData& route_info) {
+		/*
+		Забавно что этот код работает без наследования от Builder-a. По сути, если я правильно понимаю, такая передача не гарантирует ошибку компиляции
+		И я не пользовался написаной мной самим системой классов, но я не смог разобраться как сделать это наследование чтобы все работало 
+		(просто не смог объявить наследуемые классы без их определения "class AfterValue : public Builder;" не компилируется). 
+		Если объясните как это правильно делатьбуду благодарен
+		*/
+		void PrintBusCommand(Builder& dict, RouteData& route_info) {
 			if (route_info.request_status == RequestStatus::good) {
-				dict.insert({ "curvature", route_info.curvature });
-				dict.insert({ "route_length", route_info.route_distance });
-				dict.insert({ "stop_count", static_cast<int>(route_info.stops_number) });
-				dict.insert({ "unique_stop_count", static_cast<int>(route_info.uniq_stops_number) });
+				dict.Key("curvature").Value(route_info.curvature).Key("route_length").Value(route_info.route_distance);
+				dict.Key("stop_count").Value(route_info.stops_number).Key("unique_stop_count").Value(route_info.uniq_stops_number);
 			}
 			if (route_info.request_status == RequestStatus::bad) {
-				Node message = Node("not found"s);
-				dict.insert({ "error_message", message });
+				dict.Key("error_message").Value("not found"s);
 			}
 		}
 
-		void PrintStopCommand(Dict& dict, const StopInfo& stop_info) {
+		void PrintStopCommand(Builder& dict, const StopInfo& stop_info) {
 			if (stop_info.request_status == RequestStatus::good) {
 				//буферный контейнер для сортировки, по какой то причине тренажер не компилировался с сортировкой через лямбду
                 std::vector<std::string> bus_names;
@@ -192,19 +195,18 @@ namespace json {
                 for (const auto& bus : bus_names) {
                     buses.push_back(bus);
                 }
-				dict.insert({ "buses", buses });
+				dict.Key("buses").Value(buses);
 			}
 			if (stop_info.request_status == RequestStatus::bad) {
-				Node message = Node("not found"s);
-				dict.insert({ "error_message", message });
+				dict.Key("error_message").Value("not found");
 			}
 		}
 
-		void PrintMapCommand(Dict& dict, svg::Document&& doc) {
+		void PrintMapCommand(Builder& dict, svg::Document&& doc) {
 			std::stringstream to_string_flow;
 			doc.Render(to_string_flow);
 			std::string map_route = to_string_flow.str();
-			dict.insert({ "map", map_route });
+			dict.Key("map").Value(map_route);
 		}
 
 	}
@@ -217,37 +219,38 @@ namespace json {
 
 	void Reader::SetInfo(std::istream& input) {
 		Document info_base = Load(input);
-		if (!info_base.GetRoot().IsMap()) {
+		if (!info_base.GetRoot().IsDict()) {
 			throw std::logic_error("base_request is not a map");
 		}
-		const Dict& root = info_base.GetRoot().AsMap();
+		const Dict& root = info_base.GetRoot().AsDict();
 		parse::ReadBaseRequest (root, request_handler_);
 		parse::ReadRenderSetting (root, request_handler_);
 		parse::ReadStatRequest (root, requests_);
 	}
 
 	void Reader::PrintInfo(std::ostream& output) {
-		Array root;
+		Builder root = Builder{};
+		root.StartArray();
 		for (Requests request : requests_) {
-			Dict ans;
-			ans.insert({ "request_id", request.id });
+
+			root.StartDict().Key("request_id").Value(request.id);
 
 			if (request.type == "Stop") {
 				StopInfo stop_info = request_handler_.GetStopInfo(request.name);
-				print::PrintStopCommand(ans, stop_info);
+				print::PrintStopCommand(root, stop_info);
 			}
 			if (request.type == "Bus") {
 				RouteData route_info = request_handler_.GetRouteData(request.name);
-				print::PrintBusCommand(ans, route_info);
+				print::PrintBusCommand(root, route_info);
 			}
 			if (request.type == "Map") {
 				svg::Document doc;
 				request_handler_.RenderMap(doc);
-				print::PrintMapCommand(ans, std::move(doc));
+				print::PrintMapCommand(root, std::move(doc));
 			}
-			root.push_back(ans);
+			root.EndDict();
 		}
-		Document answer(root);
+		Document answer{ root.EndArray().Build() };
 		Print(answer, output);
 	}
 

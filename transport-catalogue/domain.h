@@ -31,8 +31,8 @@ struct Route {
 
 struct RouteData {
     RequestStatus request_status;
-    size_t stops_number;
-    size_t uniq_stops_number;
+    int stops_number;
+    int uniq_stops_number;
     double route_distance;
     double curvature;
 };
