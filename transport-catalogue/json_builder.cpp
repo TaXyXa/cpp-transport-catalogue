@@ -15,81 +15,35 @@ namespace json {
 		nodes_stack_.push_back(&root_);
 	}
 
-	AfterKey Builder::Key(std::string&& key) {
+	Builder::AfterKey Builder::Key(std::string key) {
 		if (!nodes_stack_.empty()) {
 			Node* curent_node = *nodes_stack_.rbegin();
 			if (curent_node->IsDict()) {
 				Node node{ nullptr };
-				auto iter = curent_node->AsDictNoConst().emplace(key, node);
-				nodes_stack_.emplace_back(&iter.first->second);
-				AfterKey ret{ *this };
-				return ret;
+				auto iter = curent_node->AsDictNoConst().emplace(std::move(key), node);
+				nodes_stack_.push_back(&iter.first->second);
+				return After(*this);
 			}
 		}
 		throw std::logic_error("error Key use");
 	}
 
-	Builder& Builder::Value(Node::Value&& value) {
-		if (!nodes_stack_.empty()) {
-			Node* curent_node = *nodes_stack_.rbegin();
-			if (curent_node->IsArray()) {
-				Node node{ nullptr };
-				node.GetValueNoConst() = value;
-				curent_node->AsArrayNoConst().push_back(node);
-				return *this;
-			}
-			else if (curent_node->IsNull()) {
-				curent_node->GetValueNoConst() = value;
-				nodes_stack_.pop_back();
-				return *this;
-			}
-		}
-		throw std::logic_error("error value use");
+	Builder::After Builder::Value(Node::Value value) {
+		AddValue(std::move(value), false);
+		return *this;
 	}
 
-	AfterStartDict Builder::StartDict() {
-		if (!nodes_stack_.empty()) {
-			Node* curent_node = *nodes_stack_.rbegin();
-			Dict dict_node;
-			if (curent_node->IsNull()) {
-				curent_node->GetValueNoConst() = dict_node;
-				AfterStartDict ret{ *this };
-				return ret;
-			}
-			else if (curent_node->IsArray()) {
-				auto iter = curent_node->AsArrayNoConst().end();
-				Node* new_dict = &(*curent_node->AsArrayNoConst().insert(iter, dict_node));
-				nodes_stack_.push_back(new_dict);
-				AfterStartDict ret{ *this };
-				return ret;
-			}
-		}
-		throw std::logic_error("error StartDict use");
-
+	Builder::AfterDictValue Builder::StartDict() {
+		AddValue(Dict{}, true);
+		return After(*this);
 	}
 
-	AfterStartArray Builder::StartArray() {
-		if (!nodes_stack_.empty()) {
-			Node* curent_node = *nodes_stack_.rbegin();
-			Array array_node;
-			if (curent_node->IsNull()) {
-				curent_node->GetValueNoConst() = array_node;
-				AfterStartArray ret{ *this };
-				return ret;
-			}
-			else if (curent_node->IsArray()) {
-				auto iter = curent_node->AsArrayNoConst().end();
-				Node* new_dict = &(*curent_node->AsArrayNoConst().insert(iter, array_node));
-				nodes_stack_.push_back(new_dict);
-				AfterStartArray ret{ *this };
-				return ret;
-			}
-		}
-
-		throw std::logic_error("error StartArray use");
+	Builder::AfterArrayValue Builder::StartArray() {
+		AddValue(Array{}, true);
+		return After(*this);
 	}
 
-	Builder& Builder::EndDict() {
+	Builder::After Builder::EndDict() {
 		if (!nodes_stack_.empty()) {
 			Node* curent_node = *nodes_stack_.rbegin();
 			if (curent_node->IsDict()) {
@@ -98,10 +52,9 @@ namespace json {
 			}
 		}
 		throw std::logic_error("error EndDict use");
-
 	}
 
-	Builder& Builder::EndArray() {
+	Builder::After Builder::EndArray() {
 		if (!nodes_stack_.empty()) {
 			Node* curent_node = *nodes_stack_.rbegin();
 			if (curent_node->IsArray()) {
@@ -119,85 +72,28 @@ namespace json {
 		throw std::logic_error("error Build use");
 	}
 
-	AfterKey::AfterKey(Builder& builder)
-		:builder_(&builder)
-	{}
-
-	AfterDictValue AfterKey::Value(Node::Value&& value) {
-		return builder_->Value(std::move(value));
+	void Builder::AddValue(Node::Value value, bool is_cont) {
+		Node* curent_node = *nodes_stack_.rbegin();
+		if (!nodes_stack_.empty()) {
+			if (curent_node->IsArray()) {
+				auto iter = curent_node->AsArrayNoConst().end();
+				Node new_node{nullptr};
+				new_node.GetValueNoConst() = std::move(value);
+				Node* new_node_ptr = &(*curent_node->AsArrayNoConst().insert(iter, new_node));
+				if (is_cont) {
+					nodes_stack_.emplace_back(new_node_ptr);
+				}
+				return;
+			}
+			else if (curent_node->IsNull()) {
+				curent_node->GetValueNoConst() = std::move(value);
+				if (!is_cont) {
+					nodes_stack_.pop_back();
+				}
+				return;
+			}
+		}
+		throw std::logic_error("error value use");
 	}
-
-	AfterStartDict AfterKey::StartDict() {
-		return builder_->StartDict();
-	}
-
-	AfterStartArray AfterKey::StartArray() {
-		return builder_->StartArray();
-	}
-
-	AfterDictValue::AfterDictValue(Builder& builder)
-		:builder_(&builder)
-	{}
-
-	AfterKey AfterDictValue::Key(std::string&& key) {
-		return builder_->Key(std::move(key));
-	}
-
-	Builder& AfterDictValue::EndDict() {
-		return builder_->EndDict();
-	}
-
-	AfterStartDict::AfterStartDict(Builder& builder)
-		:builder_(&builder)
-	{}
-
-	AfterKey AfterStartDict::Key(std::string&& key) {
-		return builder_->Key(std::move(key));
-	}
-
-	Builder& AfterStartDict::EndDict() {
-		return builder_->EndDict();
-	}
-
-	AfterStartArray::AfterStartArray(Builder& builder)
-		:builder_(&builder)
-	{}
-
-	AfterArrayValue AfterStartArray::Value(Node::Value&& value) {
-		return builder_->Value(std::move(value));
-	}
-
-	AfterStartDict AfterStartArray::StartDict() {
-		return builder_->StartDict();
-	}
-
-	AfterStartArray AfterStartArray::StartArray() {
-		return builder_->StartArray();
-	}
-
-	Builder& AfterStartArray::EndArray() {
-		return builder_->EndArray();
-	}
-
-	AfterArrayValue::AfterArrayValue(Builder& builder)
-		:builder_(&builder)
-	{}
-
-	AfterArrayValue AfterArrayValue::Value(Node::Value&& value) {
-		return builder_->Value(std::move(value));
-	}
-
-	AfterStartDict AfterArrayValue::StartDict() {
-		return builder_->StartDict();
-	}
-
-	AfterStartArray AfterArrayValue::StartArray() {
-		return builder_->StartArray();
-	}
-
-	Builder& AfterArrayValue::EndArray() {
-		return builder_->EndArray();
-	}
-
 
 }
