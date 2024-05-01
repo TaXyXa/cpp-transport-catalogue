@@ -7,28 +7,33 @@
 
 #include "transport_router.h"
 #include "graph.h"
-#include "log_duration.h"
 #include "router.h"
 #include "transport_catalogue.h"
 
 TransportRouter::TransportRouter(TransportCatalogue& catalogue)
-	:catalogue_(catalogue), wait_time_(0), velocity_(0)
+	:catalogue_(catalogue)
+	//Передача через конструктор настроек мне не нравится тем что настройки мы получаем уже при чтении данных, 
+	//а значит мы должны конструировать весь маршрутизатор либо в json_reader-e, либо внутри фасада что не очень 
+	//мне нравится с точки зрения логики разделения программы на блоки, потому что при чтении не джейсона, 
+	//а другого формата придется и там не забыть конструктор. 
+	//Конструировать Граф тоже не хочу сразу, хотел сделать ленивую инициализацию, так как не всегда требуется построение маршрута
+	//Если в чем то не прав - с радостью приму замечания, но не спорить не могу по натуре :)
 {}
 
-BestRouteInfo TransportRouter::MakeRoute(std::string from, std::string to) {
+BestRouteInfo TransportRouter::MakeRoute(const Stop* from, const Stop* to) {
 	if (graph_ == nullptr) {
-			MakeGraph();
-			router_ptr_ = std::make_unique<graph::Router<double>>(*graph_);
+		MakeGraph();
+		router_ptr_ = std::make_unique<graph::Router<double>>(*graph_);
 	}
 	size_t from_index, to_index;
-	auto iter = comming_stop_.find(catalogue_.GetStop(from));
+	auto iter = comming_stop_.find(from);
 	if (iter != comming_stop_.end()) {
 		from_index = iter->second;
 	}
 	else {
 		return { RequestStatus::bad, 0, {} };
 	}
-	iter = comming_stop_.find(catalogue_.GetStop(to));
+	iter = comming_stop_.find(to);
 	if (iter != comming_stop_.end()) {
 		to_index = iter->second;
 	}
@@ -58,7 +63,7 @@ void TransportRouter::MakeVertex() {
 	for (const auto& stop : all_stops) {
 		comming_stop_.insert({ stop.second, index });
 		leave_stop_.insert({ stop.second, size+index });
-		AddEdge(index, size + index, wait_time_, Type::Wait, stop.first, 0);
+		AddEdge(index, size + index, setting_.wait_time_, Type::Wait, stop.first, 0);
 		index++;
 	}
 }
@@ -97,7 +102,7 @@ void TransportRouter::MakeSimpleRoute(VSIter first_stop, VSIter last_stop,
 		double weight = 0;
 		int span_count = 1;
 		while (curent_stop != last_stop) {
-			weight += 1. * catalogue_.GetDistance(*(curent_stop-1), *curent_stop) / velocity_;
+			weight += 1. * catalogue_.GetDistance(*(curent_stop-1), *curent_stop) / setting_.velocity_;
 			auto previous_stop_iter = leave_stop_.find(*start_stop);
 			auto curent_stop_iter = comming_stop_.find(*curent_stop);
             std::string_view route_name = route->name_;
@@ -126,6 +131,6 @@ BestRouteInfo TransportRouter::MakeItems(std::vector<size_t> edges) {
 }
 
 void TransportRouter::SetSetting(int wait_time, int velocity) {
-	wait_time_ = static_cast<double>(wait_time);
-	velocity_ = velocity/0.06;
+	setting_.wait_time_ = static_cast<double>(wait_time);
+	setting_.velocity_ = velocity/0.06;
 }

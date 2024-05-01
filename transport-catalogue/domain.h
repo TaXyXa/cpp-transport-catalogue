@@ -56,6 +56,11 @@ struct BestRouteInfo {
     std::vector<RouteItem> items;
 };
 
+struct RouteSetting {
+	double wait_time_ = 0;
+	double velocity_ = 0;
+};
+
 struct CompareRoutes {
     bool operator()(const Route* route1, const Route* route2) const;
 };

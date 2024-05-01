@@ -55,8 +55,10 @@ void RequestHandler::SetSettings(renderer::Setting& setting) const {
 	map_renderer_.SetSettings(setting);
 }
 
-BestRouteInfo RequestHandler::MakeRoute(std::string from, std::string to) {
-	return router_.MakeRoute(from, to);
+BestRouteInfo RequestHandler::MakeRoute(std::string& from, std::string& to) {
+	Stop* from_stop_ptr = catalogue_.GetStop(from);
+	Stop* to_stop_ptr = catalogue_.GetStop(to);
+	return router_.MakeRoute(from_stop_ptr, to_stop_ptr);
 }
 
 void RequestHandler::SetRouteSettings(int wait_time, int velocity) const {

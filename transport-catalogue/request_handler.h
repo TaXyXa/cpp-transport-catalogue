@@ -36,7 +36,7 @@ public:
 
     void SetSettings(renderer::Setting& setting) const;
 
-    BestRouteInfo MakeRoute(std::string from, std::string to);
+    BestRouteInfo MakeRoute(std::string& from, std::string& to);
 
     void SetRouteSettings(int wait_time, int velocity)  const;
 

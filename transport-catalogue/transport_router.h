@@ -15,19 +15,18 @@ public:
 	using Graph = graph::DirectedWeightedGraph<double>;
 	TransportRouter(TransportCatalogue& catalogue);
 
-	BestRouteInfo MakeRoute(std::string from, std::string to);
+	BestRouteInfo MakeRoute(const Stop* from, const Stop* to);
 
 	void SetSetting(int wait_time, int velocity);
 
 private:
 	TransportCatalogue& catalogue_;
-	double wait_time_;
-	double velocity_;
+	RouteSetting setting_;
 	std::shared_ptr<Graph> graph_;
 	std::unique_ptr<graph::Router<double>> router_ptr_;
 
-	std::unordered_map<Stop*, size_t, StopHasher> comming_stop_;
-	std::unordered_map<Stop*, size_t, StopHasher> leave_stop_;
+	std::unordered_map<const Stop*, size_t, StopHasher> comming_stop_;
+	std::unordered_map<const Stop*, size_t, StopHasher> leave_stop_;
 	std::unordered_map <size_t, RouteItem> edge_stops_;
 
 	void MakeGraph();
