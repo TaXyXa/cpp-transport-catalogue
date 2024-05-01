@@ -20,7 +20,7 @@ TransportRouter::TransportRouter(TransportCatalogue& catalogue)
 	//Если в чем то не прав - с радостью приму замечания, но не спорить не могу по натуре :)
 {}
 
-BestRouteInfo TransportRouter::MakeRoute(const Stop* from, const Stop* to) {
+std::optional<BestRouteInfo> TransportRouter::MakeRoute(const Stop* from, const Stop* to) {
 	if (graph_ == nullptr) {
 		MakeGraph();
 		router_ptr_ = std::make_unique<graph::Router<double>>(*graph_);
@@ -31,21 +31,21 @@ BestRouteInfo TransportRouter::MakeRoute(const Stop* from, const Stop* to) {
 		from_index = iter->second;
 	}
 	else {
-		return { RequestStatus::bad, 0, {} };
+		return {};
 	}
 	iter = comming_stop_.find(to);
 	if (iter != comming_stop_.end()) {
 		to_index = iter->second;
 	}
 	else {
-		return { RequestStatus::bad, 0, {} };
+		return {};
 	}
 	auto route = router_ptr_->BuildRoute(from_index, to_index);
 	if (route) {
 		return MakeItems(route->edges);
 	}
 	else {
-		return { RequestStatus::bad, 0, {} };
+		return {};
 	}
 }
 
@@ -127,7 +127,7 @@ BestRouteInfo TransportRouter::MakeItems(std::vector<size_t> edges) {
 		route_items.push_back(item);
 	}
 
-	return { RequestStatus::good, weight, route_items };
+	return { weight, route_items };
 }
 
 void TransportRouter::SetSetting(int wait_time, int velocity) {

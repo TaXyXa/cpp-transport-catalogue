@@ -1,5 +1,6 @@
 #pragma once
 
+#include <optional>
 #include <unordered_set>
 
 #include "domain.h"
@@ -36,7 +37,7 @@ public:
 
     void SetSettings(renderer::Setting& setting) const;
 
-    BestRouteInfo MakeRoute(std::string& from, std::string& to);
+    std::optional<BestRouteInfo> MakeRoute(std::string& from, std::string& to);
 
     void SetRouteSettings(int wait_time, int velocity)  const;
 

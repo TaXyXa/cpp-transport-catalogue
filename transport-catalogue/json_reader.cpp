@@ -218,10 +218,10 @@ namespace json {
 			dict.Key("map").Value(map_route);
 		}
 
-		void PrintRouteCommand(Builder& dict, BestRouteInfo route) {
-			if (route.status == RequestStatus::good) {
-				auto items = dict.Key("total_time").Value(route.weight).Key("items").StartArray();
-				for (auto& item : route.items) {
+		void PrintRouteCommand(Builder& dict, std::optional<BestRouteInfo> route) {
+			if (route.has_value()) {
+				auto items = dict.Key("total_time").Value(route->weight).Key("items").StartArray();
+				for (auto& item : route->items) {
 					if (item.type == Type::Bus) {
 						items.StartDict()
 							.Key("type").Value("Bus")

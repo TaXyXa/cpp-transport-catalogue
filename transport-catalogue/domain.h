@@ -51,7 +51,6 @@ struct RouteItem {
 };
 
 struct BestRouteInfo {
-    RequestStatus status;
     double weight;
     std::vector<RouteItem> items;
 };

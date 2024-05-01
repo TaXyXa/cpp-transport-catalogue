@@ -15,7 +15,7 @@ public:
 	using Graph = graph::DirectedWeightedGraph<double>;
 	TransportRouter(TransportCatalogue& catalogue);
 
-	BestRouteInfo MakeRoute(const Stop* from, const Stop* to);
+	std::optional<BestRouteInfo> MakeRoute(const Stop* from, const Stop* to);
 
 	void SetSetting(int wait_time, int velocity);
 

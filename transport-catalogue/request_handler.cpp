@@ -55,7 +55,7 @@ void RequestHandler::SetSettings(renderer::Setting& setting) const {
 	map_renderer_.SetSettings(setting);
 }
 
-BestRouteInfo RequestHandler::MakeRoute(std::string& from, std::string& to) {
+std::optional<BestRouteInfo> RequestHandler::MakeRoute(std::string& from, std::string& to) {
 	Stop* from_stop_ptr = catalogue_.GetStop(from);
 	Stop* to_stop_ptr = catalogue_.GetStop(to);
 	return router_.MakeRoute(from_stop_ptr, to_stop_ptr);
