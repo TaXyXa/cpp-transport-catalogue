@@ -26,7 +26,8 @@ struct Stop {
 struct Route {
     std::string name_;
     std::vector<Stop*> stops_list;
-    std::vector<Stop*> end_stops_list;
+    size_t end_stop_number_;
+    bool is_roundtrip_;
 };
 
 struct RouteData {
@@ -35,6 +36,24 @@ struct RouteData {
     int uniq_stops_number;
     double route_distance;
     double curvature;
+};
+
+enum class Type {
+    Wait,
+    Bus
+};
+
+struct RouteItem {
+    Type type;
+    std::string_view name;
+    double time;
+    int span_count;
+};
+
+struct BestRouteInfo {
+    RequestStatus status;
+    double weight;
+    std::vector<RouteItem> items;
 };
 
 struct CompareRoutes {
@@ -65,7 +84,7 @@ class CoordinateHasher {
 public:
     size_t operator()(const Coordinates coordinate) const;
 };
-//структура для передачи распарсеной строки 
+
 struct StopDataParse {
     Coordinates coordinates;
     std::vector<std::pair<std::string, uint32_t>> distances;

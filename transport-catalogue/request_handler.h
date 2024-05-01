@@ -6,11 +6,12 @@
 #include "json_reader.h"
 #include "map_renderer.h"
 #include "transport_catalogue.h"
+#include "transport_router.h"
 
 class RequestHandler {
 public:
 
-    RequestHandler(TransportCatalogue& catalogue_, renderer::MapRenderer& map_renderer_);
+    RequestHandler(TransportCatalogue& catalogue, renderer::MapRenderer& map_renderer, TransportRouter& router);
 
     // Возвращает информацию о маршруте (запрос Bus)
     RouteData GetRouteData(const std::string_view& bus_name) const;
@@ -27,7 +28,7 @@ public:
     Stop* AddStop(const std::string& name, const Coordinates& coordinates) const;
 
     void AddRoute(const std::string& bus_name, const std::vector<std::string_view>& stops_vector, 
-        const std::vector<std::string_view>& end_stops_vector) const;
+        size_t end_stop_number, bool is_roundtrip) const;
 
     Stop* GetStop(const std::string& name) const;
 
@@ -35,8 +36,14 @@ public:
 
     void SetSettings(renderer::Setting& setting) const;
 
+    BestRouteInfo MakeRoute(std::string from, std::string to);
+
+    void SetRouteSettings(int wait_time, int velocity)  const;
+
 private:
     // RequestHandler использует агрегацию объектов "Транспортный Справочник" и "Визуализатор Карты"
     TransportCatalogue& catalogue_;
     renderer::MapRenderer& map_renderer_;
+    TransportRouter& router_;
+    //тут хранить ссылку на класс с настройками остановок
 };

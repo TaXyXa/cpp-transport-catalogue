@@ -21,10 +21,12 @@ public:
 
     Stop* GetStop(const std::string& name);
 
+    const std::unordered_map<std::string_view, Stop*>& GetAllStop() const;
+
     uint32_t GetDistance(Stop* curent_stop, Stop* second_stop) const;
 
     void AddRoute(const std::string& bus_name, const std::vector<std::string_view>& stops_vector, 
-        const std::vector<std::string_view>& end_stops_vector);
+                  size_t end_stop_number, bool is_roundtrip);
 
     const Route* GetRoute(const std::string& name) const ;
 
@@ -33,6 +35,10 @@ public:
     RouteData GetRouteData(const std::string_view& bus_name) const;
 
     StopInfo GetStopInfo(const std::string_view& stop_name) const;
+
+    size_t GetStopsNumber() const;
+
+    size_t GetRoutsNumber() const;
 
 private:
     //нууу мы с вами пришли к тому что deque излишен, так как мы не перемещаемся по контейнеру, нам от него

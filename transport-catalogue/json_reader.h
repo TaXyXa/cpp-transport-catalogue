@@ -12,6 +12,8 @@ namespace json {
 		int id;
 		std::string type;
 		std::string name;
+		std::string from;
+		std::string to;
 	};
 
 	class Reader {
