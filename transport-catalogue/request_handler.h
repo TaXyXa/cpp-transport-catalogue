@@ -36,7 +36,6 @@ public:
     void SetSettings(renderer::Setting& setting) const;
 
 private:
-    // RequestHandler использует агрегацию объектов "Транспортный Справочник" и "Визуализатор Карты"
     TransportCatalogue& catalogue_;
     renderer::MapRenderer& map_renderer_;
 };

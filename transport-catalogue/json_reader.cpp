@@ -164,12 +164,6 @@ namespace json {
 	}
 
 	namespace print {
-		/*
-		Забавно что этот код работает без наследования от Builder-a. По сути, если я правильно понимаю, такая передача не гарантирует ошибку компиляции
-		И я не пользовался написаной мной самим системой классов, но я не смог разобраться как сделать это наследование чтобы все работало 
-		(просто не смог объявить наследуемые классы без их определения "class AfterValue : public Builder;" не компилируется). 
-		Если объясните как это правильно делатьбуду благодарен
-		*/
 		void PrintBusCommand(Builder& dict, RouteData& route_info) {
 			if (route_info.request_status == RequestStatus::good) {
 				dict.Key("curvature").Value(route_info.curvature).Key("route_length").Value(route_info.route_distance);
@@ -182,7 +176,6 @@ namespace json {
 
 		void PrintStopCommand(Builder& dict, const StopInfo& stop_info) {
 			if (stop_info.request_status == RequestStatus::good) {
-				//буферный контейнер для сортировки, по какой то причине тренажер не компилировался с сортировкой через лямбду
                 std::vector<std::string> bus_names;
 				for (const auto& bus : *stop_info.buses) {
 					bus_names.push_back(bus->name_);
@@ -208,7 +201,6 @@ namespace json {
 			std::string map_route = to_string_flow.str();
 			dict.Key("map").Value(map_route);
 		}
-
 	}
 
 	Reader::Reader(RequestHandler& request_handler)
