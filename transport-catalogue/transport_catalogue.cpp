@@ -56,16 +56,13 @@ uint32_t TransportCatalogue::GetDistance(Stop* curent_stop, Stop* second_stop) c
 }
 
 void TransportCatalogue::AddRoute(const std::string& bus_name, const std::vector<std::string_view>& stops_vector,
-    const std::vector<std::string_view>& end_stops_vector) {
-    Route route = { bus_name, {}, {} };
+    size_t end_stop_number, bool is_roundtrip) {
+    Route route = { bus_name, {}, {}, is_roundtrip };
     for (const auto stop_name : stops_vector) {
         Stop* it = stops_reference_.at(stop_name);
         route.stops_list.push_back(it);
     }
-    for (const auto stop_name : end_stops_vector) {
-        Stop* it = stops_reference_.at(stop_name);
-        route.end_stops_list.push_back(it);
-    }
+    route.end_stop_number_ = end_stop_number;
 
     routes_.insert({ bus_name, std::move(route)});
 
@@ -165,4 +162,16 @@ StopInfo TransportCatalogue::GetStopInfo(const std::string_view& stop_name) cons
     else {
         return ans;
     }
+}
+
+size_t TransportCatalogue::GetStopsNumber() const {
+    return stops_reference_.size();
+}
+
+size_t TransportCatalogue::GetRoutsNumber() const {
+    return routes_.size();
+}
+
+const std::unordered_map<std::string_view, Stop*>& TransportCatalogue::GetAllStop() const {
+    return stops_reference_;
 }

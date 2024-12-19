@@ -66,8 +66,12 @@ namespace renderer {
 				}
 			}
 			//add ends stops
-			for (const auto& stop : route_ptr->end_stops_list) {
-				route_ens_stops_list.push_back({ stop, route_ptr->name_, *line_color_ptr });
+			if (route_ptr->is_roundtrip_) {
+				route_ens_stops_list.push_back({ *route_ptr->stops_list.begin(), route_ptr->name_, *line_color_ptr });
+			} else {
+				auto end_stop_iter = route_ptr->stops_list.begin();
+				route_ens_stops_list.push_back({ *end_stop_iter, route_ptr->name_, *line_color_ptr });
+				route_ens_stops_list.push_back({ *(end_stop_iter+route_ptr->end_stop_number_-1), route_ptr->name_, *line_color_ptr });
 			}
 			++line_color_ptr;
 		}

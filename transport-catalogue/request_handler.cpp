@@ -4,10 +4,11 @@
 #include "json_reader.h"
 #include "map_renderer.h"
 #include "transport_catalogue.h"
+#include "transport_router.h"
 #include "request_handler.h"
 
-RequestHandler::RequestHandler(TransportCatalogue& catalogue, renderer::MapRenderer& map_renderer)
-	:catalogue_(catalogue), map_renderer_(map_renderer)
+RequestHandler::RequestHandler(TransportCatalogue& catalogue, renderer::MapRenderer& map_renderer, TransportRouter& router)
+	:catalogue_(catalogue), map_renderer_(map_renderer), router_(router)
 {}
 
 RouteData RequestHandler::GetRouteData(const std::string_view& bus_name) const {
@@ -38,8 +39,8 @@ Stop* RequestHandler::AddStop(const std::string& name, const Coordinates& coordi
 }
 
 void RequestHandler::AddRoute(const std::string& bus_name, const std::vector<std::string_view>& stops_vector, 
-	const std::vector<std::string_view>& end_stops_vector) const {
-	catalogue_.AddRoute(bus_name, stops_vector, end_stops_vector);
+	size_t end_stop_number, bool is_roundtrip) const {
+	catalogue_.AddRoute(bus_name, stops_vector, end_stop_number, is_roundtrip);
 }
 
 Stop* RequestHandler::GetStop(const std::string& name) const {
@@ -52,4 +53,14 @@ void RequestHandler::AddDistance(Stop* curent_stop, Stop* second_stop, uint32_t 
 
 void RequestHandler::SetSettings(renderer::Setting& setting) const {
 	map_renderer_.SetSettings(setting);
+}
+
+std::optional<BestRouteInfo> RequestHandler::MakeRoute(std::string& from, std::string& to) {
+	Stop* from_stop_ptr = catalogue_.GetStop(from);
+	Stop* to_stop_ptr = catalogue_.GetStop(to);
+	return router_.MakeRoute(from_stop_ptr, to_stop_ptr);
+}
+
+void RequestHandler::SetRouteSettings(int wait_time, int velocity) const {
+	router_.SetSetting(wait_time, velocity);
 }
