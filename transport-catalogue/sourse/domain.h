@@ -13,24 +13,28 @@
 
 #include "geo.h"
 
-enum class RequestStatus {
+enum class RequestStatus
+{
     good,
     bad
 };
 
-struct Stop {
+struct Stop
+{
     std::string name;
     Coordinates coordinates;
 };
 
-struct Route {
+struct Route
+{
     std::string name_;
-    std::vector<Stop*> stops_list;
+    std::vector<Stop *> stops_list;
     size_t end_stop_number_;
     bool is_roundtrip_;
 };
 
-struct RouteData {
+struct RouteData
+{
     RequestStatus request_status;
     int stops_number;
     int uniq_stops_number;
@@ -38,59 +42,69 @@ struct RouteData {
     double curvature;
 };
 
-enum class Type {
+enum class Type
+{
     Wait,
     Bus
 };
 
-struct RouteItem {
+struct RouteItem
+{
     Type type;
     std::string_view name;
     double time;
     int span_count;
 };
 
-struct BestRouteInfo {
+struct BestRouteInfo
+{
     double weight;
     std::vector<RouteItem> items;
 };
 
-struct RouteSetting {
-	double wait_time_ = 0;
-	double velocity_ = 0;
+struct RouteSetting
+{
+    double wait_time_ = 0;
+    double velocity_ = 0;
 };
 
-struct CompareRoutes {
-    bool operator()(const Route* route1, const Route* route2) const;
+struct CompareRoutes
+{
+    bool operator()(const Route *route1, const Route *route2) const;
 };
 
-class RouteHasher {
+class RouteHasher
+{
 public:
-    size_t operator()(const Route* route_name) const;
+    size_t operator()(const Route *route_name) const;
 };
 
-struct StopInfo {
+struct StopInfo
+{
     RequestStatus request_status;
-    const std::unordered_set<Route*, RouteHasher>* buses;
+    const std::unordered_set<Route *, RouteHasher> *buses;
 };
 
-class StopHasher {
+class StopHasher
+{
 public:
-    size_t operator()(const Stop* stop_name) const;
+    size_t operator()(const Stop *stop_name) const;
 };
 
-class DistanceHasher {
+class DistanceHasher
+{
 public:
-    size_t operator()(const std::pair<Stop*, Stop*> stop_name) const;
+    size_t operator()(const std::pair<Stop *, Stop *> stop_name) const;
 };
 
-class CoordinateHasher {
+class CoordinateHasher
+{
 public:
-    size_t operator()(const Coordinates coordinate) const;
+    size_t operator()(const Coordinates &coordinate) const;
 };
 
-struct StopDataParse {
+struct StopDataParse
+{
     Coordinates coordinates;
     std::vector<std::pair<std::string, uint32_t>> distances;
 };
-
